@@ -1,0 +1,170 @@
+﻿<Window x:Class="CourseCenterWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:CourseCenterWPF.ViewModels"
+        Title="🏫 Учебный центр - Система учета курсов" 
+        Height="750" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        FontSize="13">
+
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <Border Grid.Row="0" Background="#2C3E50" Padding="15" Margin="0,0,0,10" CornerRadius="5">
+            <TextBlock Text="🏫 УЧЕБНЫЙ ЦЕНТР - Управление курсами и регистрациями" 
+                       FontSize="22" FontWeight="Bold" Foreground="White" 
+                       HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- Основной TabControl -->
+        <TabControl Grid.Row="1" Margin="0,5,0,0">
+
+            <!-- ВКЛАДКА 1: СЛУШАТЕЛИ -->
+            <TabItem Header="👤 Слушатели">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#ECF0F1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔍 Поиск:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Width="250" Padding="8"/>
+                            <Button Content="➕ Добавить" Command="{Binding AddCursantCommand}" Background="#27AE60"/>
+                            <Button Content="✏️ Редактировать" Command="{Binding EditCursantCommand}" Background="#F39C12"/>
+                            <Button Content="🗑️ Удалить" Command="{Binding DeleteCursantCommand}" Background="#E74C3C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Cursanti}" 
+                              SelectedItem="{Binding SelectedCursant}"
+                              AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding IdCursant}" Width="60"/>
+                            <DataGridTextColumn Header="Фамилия" Binding="{Binding Nume}" Width="120"/>
+                            <DataGridTextColumn Header="Имя" Binding="{Binding Prenume}" Width="120"/>
+                            <DataGridTextColumn Header="Телефон" Binding="{Binding Telefon}" Width="150"/>
+                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="250"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ВКЛАДКА 2: КУРСЫ -->
+            <TabItem Header="📚 Курсы">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#ECF0F1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔍 Фильтр:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Width="250" Padding="8"/>
+                            <Button Content="➕ Добавить" Command="{Binding AddCursCommand}" Background="#27AE60"/>
+                            <Button Content="✏️ Редактировать" Command="{Binding EditCursCommand}" Background="#F39C12"/>
+                            <Button Content="🗑️ Удалить" Command="{Binding DeleteCursCommand}" Background="#E74C3C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Cursuri}" 
+                              SelectedItem="{Binding SelectedCurs}"
+                              AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding IdCurs}" Width="60"/>
+                            <DataGridTextColumn Header="Наименование" Binding="{Binding Denumire}" Width="200"/>
+                            <DataGridTextColumn Header="Преподаватель" Binding="{Binding Formator}" Width="180"/>
+                            <DataGridTextColumn Header="Стоимость" Binding="{Binding Pret, StringFormat={}{0:C}}" Width="120"/>
+                            <DataGridTextColumn Header="Длительность (дни)" Binding="{Binding DurataZile}" Width="130"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ВКЛАДКА 3: РЕГИСТРАЦИИ -->
+            <TabItem Header="📝 Регистрации">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#ECF0F1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="➕ Регистрация" Command="{Binding AddInscriereCommand}" Background="#27AE60"/>
+                            <Button Content="❌ Отмена регистрации" Command="{Binding DeleteInscriereCommand}" Background="#E74C3C"/>
+                        </StackPanel>
+                    </Border>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Inscrieri}" 
+                              SelectedItem="{Binding SelectedInscriere}"
+                              AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding IdInscriere}" Width="60"/>
+                            <DataGridTextColumn Header="Слушатель" Binding="{Binding NumeCursant}" Width="150"/>
+                            <DataGridTextColumn Header="Курс" Binding="{Binding DenumireCurs}" Width="200"/>
+                            <DataGridTextColumn Header="Дата" Binding="{Binding DataInscriere, StringFormat=dd.MM.yyyy}" Width="130"/>
+                            <DataGridTextColumn Header="Статус оплаты" Binding="{Binding StatusPlata}" Width="120">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{Binding StatusPlata, Converter={StaticResource StatusColorConverter}}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ВКЛАДКА 4: ОТЧЕТЫ -->
+            <TabItem Header="📊 Отчеты">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#3498DB" Padding="15" Margin="0,0,0,15" CornerRadius="5">
+                        <TextBlock Text="{Binding StatisticsText}" FontSize="15" FontWeight="SemiBold" 
+                                   Foreground="White" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <Button Grid.Row="1" Content="📤 Экспорт отчета (TXT)" 
+                            Command="{Binding ExportRaportCommand}"
+                            Background="#27AE60" Padding="20,10" 
+                            HorizontalAlignment="Left" Margin="0,0,0,15"/>
+
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding RaportData}" 
+                              AutoGenerateColumns="True" />
+
+                    <TextBlock Grid.Row="3" Text="* Отчет отсортирован по убыванию оплаченной суммы" 
+                               FontStyle="Italic" Foreground="Gray" Margin="0,10,0,0"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Нижний колонтитул -->
+        <Border Grid.Row="2" Background="#34495E" Padding="8" Margin="0,10,0,0" CornerRadius="3">
+            <TextBlock Text="© 2026 Учебный центр | Квалификационный экзамен" 
+                       Foreground="White" HorizontalAlignment="Center" FontSize="11"/>
+        </Border>
+    </Grid>
+</Window>
