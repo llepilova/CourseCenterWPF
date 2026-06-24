@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Data;
-using System.Runtime.CompilerServices;
-using System.Windows;
 using CourseCenterWPF.Models;
 using CourseCenterWPF.Services;
 using CourseCenterWPF.Views.DialogWindows;
+using Microsoft.Data.Sqlite;
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Data;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Windows;
 
 namespace CourseCenterWPF.ViewModels
 {
@@ -14,332 +16,447 @@ namespace CourseCenterWPF.ViewModels
     {
         private readonly DatabaseService _db = new DatabaseService();
 
-        public ObservableCollection<Cursant> Cursanti { get; set; }
-        public ObservableCollection<Curs> Cursuri { get; set; }
-        public ObservableCollection<Inscriere> Inscrieri { get; set; }
-        public ObservableCollection<Cursant> CursantiForCombo { get; set; }
-        public ObservableCollection<Curs> CursuriForCombo { get; set; }
+        public ObservableCollection<Film> Filme { get; } = new();
+        public ObservableCollection<Seans> Seanse { get; } = new();
+        public ObservableCollection<Bilet> Bilete { get; } = new();
+        public ObservableCollection<Film> FilmeForCombo { get; } = new();
+        public ObservableCollection<Seans> SeanseForCombo { get; } = new();
 
-        private Cursant _selectedCursant;
-        public Cursant SelectedCursant
+        private Film? _selectedFilm;
+        public Film? SelectedFilm
         {
-            get => _selectedCursant;
-            set { _selectedCursant = value; OnPropertyChanged(); }
+            get => _selectedFilm;
+            set { _selectedFilm = value; OnPropertyChanged(); }
         }
 
-        private Curs _selectedCurs;
-        public Curs SelectedCurs
+        private Seans? _selectedSeans;
+        public Seans? SelectedSeans
         {
-            get => _selectedCurs;
-            set { _selectedCurs = value; OnPropertyChanged(); }
+            get => _selectedSeans;
+            set { _selectedSeans = value; OnPropertyChanged(); }
         }
 
-        private Inscriere _selectedInscriere;
-        public Inscriere SelectedInscriere
+        private Bilet? _selectedBilet;
+        public Bilet? SelectedBilet
         {
-            get => _selectedInscriere;
-            set { _selectedInscriere = value; OnPropertyChanged(); }
+            get => _selectedBilet;
+            set { _selectedBilet = value; OnPropertyChanged(); }
         }
 
-        private string _searchText;
-        public string SearchText
+        private string _filmSearchText = string.Empty;
+        public string FilmSearchText
         {
-            get => _searchText;
-            set { _searchText = value; OnPropertyChanged(); SearchCursanti(); }
+            get => _filmSearchText;
+            set
+            {
+                _filmSearchText = value;
+                OnPropertyChanged();
+                LoadFilme();
+            }
         }
 
-        private string _filterText;
-        public string FilterText
+        private Film? _selectedFilmFilter;
+        public Film? SelectedFilmFilter
         {
-            get => _filterText;
-            set { _filterText = value; OnPropertyChanged(); FilterCursuri(); }
+            get => _selectedFilmFilter;
+            set
+            {
+                _selectedFilmFilter = value;
+                OnPropertyChanged();
+                LoadSeanse();
+            }
         }
 
-        private string _statisticsText;
-        public string StatisticsText
+        private DateTime? _seansDateFilter;
+        public DateTime? SeansDateFilter
         {
-            get => _statisticsText;
-            set { _statisticsText = value; OnPropertyChanged(); }
+            get => _seansDateFilter;
+            set
+            {
+                _seansDateFilter = value;
+                OnPropertyChanged();
+                LoadSeanse();
+            }
         }
 
-        private DataTable _raportData;
-        public DataTable RaportData
+        private Film? _selectedFilmBiletFilter;
+        public Film? SelectedFilmBiletFilter
         {
-            get => _raportData;
-            set { _raportData = value; OnPropertyChanged(); }
+            get => _selectedFilmBiletFilter;
+            set
+            {
+                _selectedFilmBiletFilter = value;
+                OnPropertyChanged();
+                LoadBilete();
+            }
         }
 
-        public RelayCommand AddCursantCommand { get; set; }
-        public RelayCommand EditCursantCommand { get; set; }
-        public RelayCommand DeleteCursantCommand { get; set; }
-        public RelayCommand AddCursCommand { get; set; }
-        public RelayCommand EditCursCommand { get; set; }
-        public RelayCommand DeleteCursCommand { get; set; }
-        public RelayCommand AddInscriereCommand { get; set; }
-        public RelayCommand DeleteInscriereCommand { get; set; }
-        public RelayCommand ExportRaportCommand { get; set; }
+        private Seans? _selectedSeansBiletFilter;
+        public Seans? SelectedSeansBiletFilter
+        {
+            get => _selectedSeansBiletFilter;
+            set
+            {
+                _selectedSeansBiletFilter = value;
+                OnPropertyChanged();
+                LoadBilete();
+            }
+        }
+
+        private DateTime? _biletDateFilter;
+        public DateTime? BiletDateFilter
+        {
+            get => _biletDateFilter;
+            set
+            {
+                _biletDateFilter = value;
+                OnPropertyChanged();
+                LoadBilete();
+            }
+        }
+
+        public RelayCommand AddFilmCommand { get; }
+        public RelayCommand EditFilmCommand { get; }
+        public RelayCommand DeleteFilmCommand { get; }
+        public RelayCommand AddSeansCommand { get; }
+        public RelayCommand EditSeansCommand { get; }
+        public RelayCommand DeleteSeansCommand { get; }
+        public RelayCommand AddBiletCommand { get; }
+        public RelayCommand EditBiletCommand { get; }
+        public RelayCommand DeleteBiletCommand { get; }
+        public RelayCommand ResetSeansFiltersCommand { get; }
+        public RelayCommand ResetBiletFiltersCommand { get; }
 
         public MainViewModel()
         {
-            Cursanti = new ObservableCollection<Cursant>();
-            Cursuri = new ObservableCollection<Curs>();
-            Inscrieri = new ObservableCollection<Inscriere>();
-            CursantiForCombo = new ObservableCollection<Cursant>();
-            CursuriForCombo = new ObservableCollection<Curs>();
+            AddFilmCommand = new RelayCommand(AddFilm);
+            EditFilmCommand = new RelayCommand(EditFilm, () => SelectedFilm != null);
+            DeleteFilmCommand = new RelayCommand(DeleteFilm, () => SelectedFilm != null);
+            AddSeansCommand = new RelayCommand(AddSeans);
+            EditSeansCommand = new RelayCommand(EditSeans, () => SelectedSeans != null);
+            DeleteSeansCommand = new RelayCommand(DeleteSeans, () => SelectedSeans != null);
+            AddBiletCommand = new RelayCommand(AddBilet);
+            EditBiletCommand = new RelayCommand(EditBilet, () => SelectedBilet != null);
+            DeleteBiletCommand = new RelayCommand(DeleteBilet, () => SelectedBilet != null);
+            ResetSeansFiltersCommand = new RelayCommand(ResetSeansFilters);
+            ResetBiletFiltersCommand = new RelayCommand(ResetBiletFilters);
 
             LoadAllData();
-
-            AddCursantCommand = new RelayCommand(AddCursant);
-            EditCursantCommand = new RelayCommand(EditCursant, () => SelectedCursant != null);
-            DeleteCursantCommand = new RelayCommand(DeleteCursant, () => SelectedCursant != null);
-            AddCursCommand = new RelayCommand(AddCurs);
-            EditCursCommand = new RelayCommand(EditCurs, () => SelectedCurs != null);
-            DeleteCursCommand = new RelayCommand(DeleteCurs, () => SelectedCurs != null);
-            AddInscriereCommand = new RelayCommand(AddInscriere);
-            DeleteInscriereCommand = new RelayCommand(DeleteInscriere, () => SelectedInscriere != null);
-            ExportRaportCommand = new RelayCommand(ExportRaport);
         }
 
         private void LoadAllData()
         {
-            LoadCursanti();
-            LoadCursuri();
-            LoadInscrieri();
-            LoadRaport();
-            LoadComboBoxData();
+            LoadFilmeForCombo();
+            LoadFilme();
+            LoadSeanseForCombo();
+            LoadSeanse();
+            LoadBilete();
         }
 
-        private void LoadCursanti()
+        private void LoadFilmeForCombo()
         {
-            Cursanti.Clear();
-            foreach (var item in _db.GetCursanti())
-                Cursanti.Add(item);
+            FilmeForCombo.Clear();
+            FilmeForCombo.Add(new Film { IdFilm = 0, Titlu = "Все фильмы" });
+            foreach (var film in _db.GetFilme())
+            {
+                FilmeForCombo.Add(film);
+            }
+
+            SelectedFilmFilter ??= FilmeForCombo[0];
+            SelectedFilmBiletFilter ??= FilmeForCombo[0];
         }
 
-        private void LoadCursuri()
+        private void LoadSeanseForCombo()
         {
-            Cursuri.Clear();
-            foreach (var item in _db.GetCursuri())
-                Cursuri.Add(item);
-        }
+            SeanseForCombo.Clear();
+            SeanseForCombo.Add(new Seans { IdSeansa = 0, FilmTitlu = "Все сеансы", DataSeansa = DateTime.Today, OraSeansa = "-" });
 
-        private void LoadInscrieri()
-        {
-            Inscrieri.Clear();
-            string query = @"
-                SELECT i.IdInscriere, i.IdCursant, i.IdCurs, i.DataInscriere, i.StatusPlata,
-                       CONCAT(c.Nume, ' ', c.Prenume) AS NumeCursant,
-                       cu.Denumire AS DenumireCurs
-                FROM Inscriere i
-                JOIN Cursant c ON i.IdCursant = c.IdCursant
-                JOIN Curs cu ON i.IdCurs = cu.IdCurs
-                ORDER BY i.DataInscriere DESC";
-            DataTable dt = _db.ExecuteQuery(query);
+            var dt = _db.ExecuteQuery(@"
+                SELECT s.IdSeansa, f.Titlu, s.DataSeansa, s.OraSeansa
+                FROM Seanse s
+                JOIN Filme f ON f.IdFilm = s.IdFilm
+                ORDER BY s.DataSeansa, s.OraSeansa");
+
             foreach (DataRow row in dt.Rows)
             {
-                Inscrieri.Add(new Inscriere
+                SeanseForCombo.Add(new Seans
                 {
-                    IdInscriere = Convert.ToInt32(row["IdInscriere"]),
-                    IdCursant = Convert.ToInt32(row["IdCursant"]),
-                    IdCurs = Convert.ToInt32(row["IdCurs"]),
-                    DataInscriere = Convert.ToDateTime(row["DataInscriere"]),
-                    StatusPlata = row["StatusPlata"].ToString(),
-                    NumeCursant = row["NumeCursant"].ToString(),
-                    DenumireCurs = row["DenumireCurs"].ToString()
+                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
+                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
+                    DataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
+                    OraSeansa = row["OraSeansa"].ToString() ?? string.Empty
+                });
+            }
+
+            SelectedSeansBiletFilter ??= SeanseForCombo[0];
+        }
+
+        private void LoadFilme()
+        {
+            Filme.Clear();
+            var query = "SELECT IdFilm, Titlu, Gen, DurataMinute, LimitaVarsta FROM Filme";
+            var parameters = new Collection<SqliteParameter>();
+
+            if (!string.IsNullOrWhiteSpace(FilmSearchText))
+            {
+                query += " WHERE Titlu LIKE @q OR Gen LIKE @q OR CAST(LimitaVarsta AS TEXT) LIKE @q";
+                parameters.Add(new SqliteParameter("@q", $"%{FilmSearchText.Trim()}%"));
+            }
+
+            query += " ORDER BY Titlu";
+            var dt = _db.ExecuteQuery(query, [.. parameters]);
+            foreach (DataRow row in dt.Rows)
+            {
+                Filme.Add(new Film
+                {
+                    IdFilm = Convert.ToInt32(row["IdFilm"]),
+                    Titlu = row["Titlu"].ToString() ?? string.Empty,
+                    Gen = row["Gen"].ToString() ?? string.Empty,
+                    DurataMinute = Convert.ToInt32(row["DurataMinute"]),
+                    LimitaVarsta = Convert.ToInt32(row["LimitaVarsta"])
                 });
             }
         }
 
-        private void LoadComboBoxData()
+        private void LoadSeanse()
         {
-            CursantiForCombo.Clear();
-            foreach (var c in _db.GetCursanti())
-                CursantiForCombo.Add(c);
+            Seanse.Clear();
+            var query = @"
+                SELECT s.IdSeansa, s.IdFilm, f.Titlu, s.DataSeansa, s.OraSeansa, s.PretBilet, s.NumarLocuriTotal,
+                       COALESCE(SUM(b.NumarBilete), 0) AS TotalBileteVandute
+                FROM Seanse s
+                JOIN Filme f ON f.IdFilm = s.IdFilm
+                LEFT JOIN Bilete b ON b.IdSeansa = s.IdSeansa
+                WHERE 1=1";
+            var parameters = new Collection<SqliteParameter>();
 
-            CursuriForCombo.Clear();
-            foreach (var c in _db.GetCursuri())
-                CursuriForCombo.Add(c);
-        }
-
-        private void LoadRaport()
-        {
-            string query = @"
-                SELECT 
-                    CONCAT(c.Nume, ' ', c.Prenume) AS FullName,
-                    COUNT(i.IdInscriere) AS Registrations,
-                    SUM(CASE WHEN i.StatusPlata = 'Platit' THEN cu.Pret ELSE 0 END) AS TotalPaid
-                FROM Cursant c
-                LEFT JOIN Inscriere i ON c.IdCursant = i.IdCursant
-                LEFT JOIN Curs cu ON i.IdCurs = cu.IdCurs
-                GROUP BY c.IdCursant
-                ORDER BY TotalPaid DESC;";
-            RaportData = _db.ExecuteQuery(query);
-
-            string statsQuery = @"
-                SELECT 
-                    (SELECT COUNT(*) FROM Cursant) AS TotalCursanti,
-                    (SELECT COALESCE(SUM(Pret), 0) FROM Inscriere i JOIN Curs cu ON i.IdCurs = cu.IdCurs WHERE StatusPlata = 'Platit') AS TotalIncasari,
-                    (SELECT COALESCE(AVG(TotalPaid), 0) FROM 
-                        (SELECT SUM(Pret) AS TotalPaid FROM Inscriere i JOIN Curs cu ON i.IdCurs = cu.IdCurs WHERE StatusPlata = 'Platit' GROUP BY IdCursant) AS t) AS AvgPerCursant,
-                    (SELECT cu.Denumire FROM Inscriere i JOIN Curs cu ON i.IdCurs = cu.IdCurs GROUP BY cu.IdCurs ORDER BY COUNT(*) DESC LIMIT 1) AS TopCurs;
-                ";
-            DataTable stats = _db.ExecuteQuery(statsQuery);
-            if (stats.Rows.Count > 0)
+            if (SelectedFilmFilter is { IdFilm: > 0 })
             {
-                StatisticsText = $"👥 Слушателей: {stats.Rows[0]["TotalCursanti"]} | " +
-                                 $"💰 Поступлений: {Convert.ToDecimal(stats.Rows[0]["TotalIncasari"]):C} | " +
-                                 $"📊 Среднее: {Convert.ToDecimal(stats.Rows[0]["AvgPerCursant"]):C} | " +
-                                 $"🏆 Топ курс: {stats.Rows[0]["TopCurs"]}";
+                query += " AND s.IdFilm = @filmId";
+                parameters.Add(new SqliteParameter("@filmId", SelectedFilmFilter.IdFilm));
+            }
+
+            if (SeansDateFilter.HasValue)
+            {
+                query += " AND s.DataSeansa = @data";
+                parameters.Add(new SqliteParameter("@data", SeansDateFilter.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            }
+
+            query += " GROUP BY s.IdSeansa ORDER BY s.DataSeansa, s.OraSeansa";
+
+            var dt = _db.ExecuteQuery(query, [.. parameters]);
+            foreach (DataRow row in dt.Rows)
+            {
+                Seanse.Add(new Seans
+                {
+                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
+                    IdFilm = Convert.ToInt32(row["IdFilm"]),
+                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
+                    DataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
+                    OraSeansa = row["OraSeansa"].ToString() ?? string.Empty,
+                    PretBilet = Convert.ToDecimal(row["PretBilet"]),
+                    NumarLocuriTotal = Convert.ToInt32(row["NumarLocuriTotal"]),
+                    TotalBileteVandute = Convert.ToInt32(row["TotalBileteVandute"])
+                });
             }
         }
 
-        private void SearchCursanti()
+        private void LoadBilete()
         {
-            if (string.IsNullOrWhiteSpace(SearchText))
+            Bilete.Clear();
+            var query = @"
+                SELECT b.IdBilet, b.IdSeansa, b.ReducereProcent, b.NumarBilete, b.SumaAchitata, b.DataVanzare,
+                       f.Titlu, s.DataSeansa, s.OraSeansa
+                FROM Bilete b
+                JOIN Seanse s ON s.IdSeansa = b.IdSeansa
+                JOIN Filme f ON f.IdFilm = s.IdFilm
+                WHERE 1=1";
+            var parameters = new Collection<SqliteParameter>();
+
+            if (SelectedFilmBiletFilter is { IdFilm: > 0 })
             {
-                LoadCursanti();
+                query += " AND f.IdFilm = @filmId";
+                parameters.Add(new SqliteParameter("@filmId", SelectedFilmBiletFilter.IdFilm));
+            }
+
+            if (SelectedSeansBiletFilter is { IdSeansa: > 0 })
+            {
+                query += " AND s.IdSeansa = @seansId";
+                parameters.Add(new SqliteParameter("@seansId", SelectedSeansBiletFilter.IdSeansa));
+            }
+
+            if (BiletDateFilter.HasValue)
+            {
+                query += " AND b.DataVanzare = @data";
+                parameters.Add(new SqliteParameter("@data", BiletDateFilter.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            }
+
+            query += " ORDER BY b.DataVanzare DESC, b.IdBilet DESC";
+
+            var dt = _db.ExecuteQuery(query, [.. parameters]);
+            foreach (DataRow row in dt.Rows)
+            {
+                var dataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd"));
+                Bilete.Add(new Bilet
+                {
+                    IdBilet = Convert.ToInt32(row["IdBilet"]),
+                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
+                    ReducereProcent = Convert.ToDecimal(row["ReducereProcent"]),
+                    NumarBilete = Convert.ToInt32(row["NumarBilete"]),
+                    SumaAchitata = Convert.ToDecimal(row["SumaAchitata"]),
+                    DataVanzare = DateTime.Parse(row["DataVanzare"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
+                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
+                    SeansInfo = $"{dataSeansa:dd.MM.yyyy} {row["OraSeansa"]}"
+                });
+            }
+        }
+
+        private void AddFilm()
+        {
+            var dialog = new FilmDialog();
+            if (dialog.ShowDialog() == true)
+            {
+                LoadAllData();
+            }
+        }
+
+        private void EditFilm()
+        {
+            if (SelectedFilm == null)
+            {
                 return;
             }
-            Cursanti.Clear();
-            string query = $"SELECT * FROM Cursant WHERE Nume LIKE '%{SearchText}%' OR Prenume LIKE '%{SearchText}%' OR Email LIKE '%{SearchText}%'";
-            DataTable dt = _db.ExecuteQuery(query);
-            foreach (DataRow row in dt.Rows)
+
+            var dialog = new FilmDialog(SelectedFilm);
+            if (dialog.ShowDialog() == true)
             {
-                Cursanti.Add(new Cursant
-                {
-                    IdCursant = Convert.ToInt32(row["IdCursant"]),
-                    Nume = row["Nume"].ToString(),
-                    Prenume = row["Prenume"].ToString(),
-                    Telefon = row["Telefon"].ToString(),
-                    Email = row["Email"].ToString()
-                });
+                LoadAllData();
             }
         }
 
-        private void FilterCursuri()
+        private void DeleteFilm()
         {
-            if (string.IsNullOrWhiteSpace(FilterText))
+            if (SelectedFilm == null)
             {
-                LoadCursuri();
                 return;
             }
-            Cursuri.Clear();
-            string query = $"SELECT * FROM Curs WHERE Formator LIKE '%{FilterText}%' OR DurataZile = '{FilterText}'";
-            DataTable dt = _db.ExecuteQuery(query);
-            foreach (DataRow row in dt.Rows)
+
+            if (MessageBox.Show(
+                    $"Удалить фильм \"{SelectedFilm.Titlu}\" и связанные сеансы/билеты?",
+                    "Подтверждение",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
-                Cursuri.Add(new Curs
-                {
-                    IdCurs = Convert.ToInt32(row["IdCurs"]),
-                    Denumire = row["Denumire"].ToString(),
-                    Formator = row["Formator"].ToString(),
-                    Pret = Convert.ToDecimal(row["Pret"]),
-                    DurataZile = Convert.ToInt32(row["DurataZile"])
-                });
+                return;
             }
+
+            _db.ExecuteNonQuery("DELETE FROM Filme WHERE IdFilm = @id", new SqliteParameter("@id", SelectedFilm.IdFilm));
+            LoadAllData();
         }
 
-        private void AddCursant()
+        private void AddSeans()
         {
-            var dialog = new CursantDialog();
+            var dialog = new SeansDialog(FilmeForCombo);
             if (dialog.ShowDialog() == true)
-                LoadAllData();
-        }
-
-        private void EditCursant()
-        {
-            var dialog = new CursantDialog(SelectedCursant);
-            if (dialog.ShowDialog() == true)
-                LoadAllData();
-        }
-
-        private void DeleteCursant()
-        {
-            if (MessageBox.Show($"Удалить слушателя {SelectedCursant.FullName}?", "Подтверждение",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                _db.ExecuteNonQuery($"DELETE FROM Cursant WHERE IdCursant = {SelectedCursant.IdCursant}");
                 LoadAllData();
             }
         }
 
-        private void AddCurs()
+        private void EditSeans()
         {
-            var dialog = new CursDialog();
-            if (dialog.ShowDialog() == true)
-                LoadAllData();
-        }
-
-        private void EditCurs()
-        {
-            var dialog = new CursDialog(SelectedCurs);
-            if (dialog.ShowDialog() == true)
-                LoadAllData();
-        }
-
-        private void DeleteCurs()
-        {
-            if (MessageBox.Show($"Удалить курс {SelectedCurs.Denumire}?", "Подтверждение",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (SelectedSeans == null)
             {
-                _db.ExecuteNonQuery($"DELETE FROM Curs WHERE IdCurs = {SelectedCurs.IdCurs}");
+                return;
+            }
+
+            var dialog = new SeansDialog(FilmeForCombo, SelectedSeans);
+            if (dialog.ShowDialog() == true)
+            {
                 LoadAllData();
             }
         }
 
-        private void AddInscriere()
+        private void DeleteSeans()
         {
-            var dialog = new InscriereDialog(CursantiForCombo, CursuriForCombo);
+            if (SelectedSeans == null)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    "Удалить сеанс и связанные продажи билетов?",
+                    "Подтверждение",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _db.ExecuteNonQuery("DELETE FROM Seanse WHERE IdSeansa = @id", new SqliteParameter("@id", SelectedSeans.IdSeansa));
+            LoadAllData();
+        }
+
+        private void AddBilet()
+        {
+            var dialog = new BiletDialog(SeanseForCombo);
             if (dialog.ShowDialog() == true)
-                LoadAllData();
-        }
-
-        private void DeleteInscriere()
-        {
-            if (MessageBox.Show($"Отменить регистрацию на курс {SelectedInscriere.DenumireCurs}?", "Подтверждение",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                _db.ExecuteNonQuery($"DELETE FROM Inscriere WHERE IdInscriere = {SelectedInscriere.IdInscriere}");
                 LoadAllData();
             }
         }
 
-        private void ExportRaport()
+        private void EditBilet()
         {
-            Microsoft.Win32.SaveFileDialog sfd = new Microsoft.Win32.SaveFileDialog
+            if (SelectedBilet == null)
             {
-                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
-            };
-            if (sfd.ShowDialog() == true)
+                return;
+            }
+
+            var dialog = new BiletDialog(SeanseForCombo, SelectedBilet);
+            if (dialog.ShowDialog() == true)
             {
-                try
-                {
-                    string content = "========== ОТЧЕТ ПО УЧАСТИЮ И ОПЛАТАМ ==========\n\n";
-                    content += "Слушатель | Регистраций | Оплачено\n";
-                    content += "----------------------------------------\n";
-
-                    foreach (DataRow row in RaportData.Rows)
-                    {
-                        content += $"{row["FullName"]} | {row["Registrations"]} | {Convert.ToDecimal(row["TotalPaid"]):C}\n";
-                    }
-
-                    content += $"\n{StatisticsText}";
-                    content += "\n\n===========================================";
-
-                    System.IO.File.WriteAllText(sfd.FileName, content);
-                    MessageBox.Show("Отчет успешно экспортирован!", "Успех",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка экспорта: {ex.Message}", "Ошибка",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                LoadAllData();
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) =>
+        private void DeleteBilet()
+        {
+            if (SelectedBilet == null)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    "Удалить выбранную продажу билетов?",
+                    "Подтверждение",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _db.ExecuteNonQuery("DELETE FROM Bilete WHERE IdBilet = @id", new SqliteParameter("@id", SelectedBilet.IdBilet));
+            LoadAllData();
+        }
+
+        private void ResetSeansFilters()
+        {
+            SeansDateFilter = null;
+            SelectedFilmFilter = FilmeForCombo.Count > 0 ? FilmeForCombo[0] : null;
+            LoadSeanse();
+        }
+
+        private void ResetBiletFilters()
+        {
+            BiletDateFilter = null;
+            SelectedFilmBiletFilter = FilmeForCombo.Count > 0 ? FilmeForCombo[0] : null;
+            SelectedSeansBiletFilter = SeanseForCombo.Count > 0 ? SeanseForCombo[0] : null;
+            LoadBilete();
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
