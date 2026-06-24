@@ -1,10 +1,11 @@
-<Window x:Class="CourseCenterWPF.Views.DialogWindows.BiletDialog"
+<Window x:Class="CourseCenterWPF.Views.DialogWindows.AprovizionareDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Продажа билетов" Height="430" Width="500"
+        Title="Поставка" Height="430" Width="520"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
     <Grid Margin="15">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -19,25 +20,28 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Сеанс:" Margin="0,6"/>
-        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbSeans" Margin="0,6" DisplayMemberPath="FilmTitlu" SelectedValuePath="IdSeansa" SelectionChanged="CmbSeans_SelectionChanged"/>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Лекарство:" Margin="0,6"/>
+        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbMedicament" Margin="0,6" DisplayMemberPath="Denumire" SelectedValuePath="IdMedicament" SelectionChanged="InputChanged"/>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Дата продажи:" Margin="0,6"/>
-        <DatePicker Grid.Row="1" Grid.Column="1" x:Name="dpDataVanzare" Margin="0,6"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Поставщик:" Margin="0,6"/>
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbFurnizor" Margin="0,6" DisplayMemberPath="Denumire" SelectedValuePath="IdFurnizor" SelectionChanged="InputChanged"/>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Скидка (%):" Margin="0,6"/>
-        <TextBox Grid.Row="2" Grid.Column="1" x:Name="txtReducere" Margin="0,6" TextChanged="InputChanged"/>
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Дата поставки:" Margin="0,6"/>
+        <DatePicker Grid.Row="2" Grid.Column="1" x:Name="dpDataAprovizionare" Margin="0,6" SelectedDateChanged="InputChanged"/>
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Количество билетов:" Margin="0,6"/>
-        <TextBox Grid.Row="3" Grid.Column="1" x:Name="txtNumarBilete" Margin="0,6" TextChanged="InputChanged"/>
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Количество:" Margin="0,6"/>
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="txtCantitate" Margin="0,6" TextChanged="InputChanged"/>
 
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="Свободных мест:" Margin="0,6"/>
-        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="txtLocuriLibere" Margin="0,6" FontWeight="SemiBold"/>
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Закупочная цена:" Margin="0,6"/>
+        <TextBox Grid.Row="4" Grid.Column="1" x:Name="txtPretAchizitie" Margin="0,6" TextChanged="InputChanged"/>
 
-        <TextBlock Grid.Row="5" Grid.Column="0" Text="Сумма к оплате:" Margin="0,6"/>
-        <TextBlock Grid.Row="5" Grid.Column="1" x:Name="txtSuma" Margin="0,6" FontWeight="Bold"/>
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Дата истечения:" Margin="0,6"/>
+        <DatePicker Grid.Row="5" Grid.Column="1" x:Name="dpDataExpirare" Margin="0,6" SelectedDateChanged="InputChanged"/>
 
-        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Общая стоимость:" Margin="0,6"/>
+        <TextBlock Grid.Row="6" Grid.Column="1" x:Name="txtCostTotal" Margin="0,6" FontWeight="Bold"/>
+
+        <StackPanel Grid.Row="8" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Сохранить" Click="BtnSave_Click" Padding="16,6" Margin="0,0,8,0"/>
             <Button Content="Отмена" Click="BtnCancel_Click" Padding="16,6"/>
         </StackPanel>
