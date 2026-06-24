@@ -1,9 +1,7 @@
 using CourseCenterWPF.Models;
 using CourseCenterWPF.Services;
-using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.ObjectModel;
-using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -11,173 +9,141 @@ using System.Windows.Controls;
 
 namespace CourseCenterWPF.Views.DialogWindows
 {
-    public partial class BiletDialog : Window
+    public partial class AprovizionareDialog : Window
     {
         private readonly DatabaseService _db = new();
-        private readonly Bilet? _bilet;
+        private readonly Aprovizionare? _aprovizionare;
         private readonly bool _isEdit;
-        private readonly ObservableCollection<Seans> _seanse;
+        private readonly ObservableCollection<Medicament> _medicamente;
+        private readonly ObservableCollection<Furnizor> _furnizori;
 
-        public BiletDialog(ObservableCollection<Seans> seanse, Bilet? bilet = null)
+        public AprovizionareDialog(ObservableCollection<Medicament> medicamente, ObservableCollection<Furnizor> furnizori, Aprovizionare? aprovizionare = null)
         {
             InitializeComponent();
             Owner = Application.Current.MainWindow;
 
-            _seanse = new ObservableCollection<Seans>(seanse.Where(s => s.IdSeansa > 0));
-            _bilet = bilet;
-            _isEdit = bilet != null;
+            _medicamente = new ObservableCollection<Medicament>(medicamente.Where(x => x.IdMedicament > 0));
+            _furnizori = new ObservableCollection<Furnizor>(furnizori.Where(x => x.IdFurnizor > 0));
+            _aprovizionare = aprovizionare;
+            _isEdit = aprovizionare != null;
 
-            cmbSeans.ItemsSource = _seanse;
-            dpDataVanzare.SelectedDate = DateTime.Today;
-            txtReducere.Text = "0";
-            txtNumarBilete.Text = "1";
+            cmbMedicament.ItemsSource = _medicamente;
+            cmbFurnizor.ItemsSource = _furnizori;
+            dpDataAprovizionare.SelectedDate = DateTime.Today;
+            dpDataExpirare.SelectedDate = DateTime.Today.AddYears(1);
+            txtCantitate.Text = "1";
+            txtPretAchizitie.Text = "1";
 
-            if (_isEdit && _bilet != null)
+            if (_isEdit && _aprovizionare != null)
             {
-                cmbSeans.SelectedValue = _bilet.IdSeansa;
-                dpDataVanzare.SelectedDate = _bilet.DataVanzare;
-                txtReducere.Text = _bilet.ReducereProcent.ToString(CultureInfo.InvariantCulture);
-                txtNumarBilete.Text = _bilet.NumarBilete.ToString();
+                cmbMedicament.SelectedValue = _aprovizionare.IdMedicament;
+                cmbFurnizor.SelectedValue = _aprovizionare.IdFurnizor;
+                dpDataAprovizionare.SelectedDate = _aprovizionare.DataAprovizionare;
+                txtCantitate.Text = _aprovizionare.Cantitate.ToString();
+                txtPretAchizitie.Text = _aprovizionare.PretAchizitie.ToString(CultureInfo.InvariantCulture);
+                dpDataExpirare.SelectedDate = _aprovizionare.DataExpirare;
             }
-            else if (_seanse.Count > 0)
+            else
             {
-                cmbSeans.SelectedIndex = 0;
+                if (_medicamente.Count > 0)
+                {
+                    cmbMedicament.SelectedIndex = 0;
+                }
+
+                if (_furnizori.Count > 0)
+                {
+                    cmbFurnizor.SelectedIndex = 0;
+                }
             }
 
             RefreshCalculatedFields();
         }
 
-        private void CmbSeans_SelectionChanged(object sender, SelectionChangedEventArgs e) => RefreshCalculatedFields();
-        private void InputChanged(object sender, TextChangedEventArgs e) => RefreshCalculatedFields();
+        private void InputChanged(object sender, EventArgs e) => RefreshCalculatedFields();
 
         private void RefreshCalculatedFields()
         {
-            var freeSeats = GetFreeSeats();
-            txtLocuriLibere.Text = freeSeats >= 0 ? freeSeats.ToString() : "-";
-
-            var price = GetTicketPrice();
-            if (!decimal.TryParse(txtReducere.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var discount))
+            if (cmbMedicament.SelectedItem is not Medicament || cmbFurnizor.SelectedItem is not Furnizor)
             {
-                discount = 0;
+                txtCostTotal.Text = "0.00";
+                return;
             }
 
-            if (!int.TryParse(txtNumarBilete.Text, out var count))
+            if (!TryParseDecimal(txtPretAchizitie.Text, out var price))
             {
-                count = 0;
+                price = 0;
             }
 
-            var sum = Math.Round(price * count * (1 - discount / 100m), 2);
-            txtSuma.Text = $"{sum:F2}";
-        }
-
-        private decimal GetTicketPrice()
-        {
-            if (cmbSeans.SelectedItem is not Seans seans)
+            if (!int.TryParse(txtCantitate.Text, out var qty))
             {
-                return 0;
+                qty = 0;
             }
 
-            var value = _db.ExecuteScalar("SELECT PretBilet FROM Seanse WHERE IdSeansa = @id", new SqliteParameter("@id", seans.IdSeansa));
-            return value == null ? 0 : Convert.ToDecimal(value, CultureInfo.InvariantCulture);
-        }
-
-        private int GetFreeSeats()
-        {
-            if (cmbSeans.SelectedItem is not Seans seans)
-            {
-                return -1;
-            }
-
-            var dt = _db.ExecuteQuery(
-                @"SELECT NumarLocuriTotal,
-                         COALESCE((SELECT SUM(NumarBilete) FROM Bilete WHERE IdSeansa = @idSeansa AND (@excludeId = 0 OR IdBilet <> @excludeId)), 0) AS Sold
-                  FROM Seanse
-                  WHERE IdSeansa = @idSeansa",
-                new SqliteParameter("@idSeansa", seans.IdSeansa),
-                new SqliteParameter("@excludeId", _isEdit && _bilet != null ? _bilet.IdBilet : 0));
-
-            if (dt.Rows.Count == 0)
-            {
-                return -1;
-            }
-
-            var total = Convert.ToInt32(dt.Rows[0]["NumarLocuriTotal"]);
-            var sold = Convert.ToInt32(dt.Rows[0]["Sold"]);
-            return total - sold;
+            txtCostTotal.Text = Math.Round(price * qty, 2).ToString("F2", CultureInfo.InvariantCulture);
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (cmbSeans.SelectedItem is not Seans seans)
+            if (cmbMedicament.SelectedItem is not Medicament medicament)
             {
-                MessageBox.Show("Выберите сеанс.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите лекарство.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!dpDataVanzare.SelectedDate.HasValue)
+            if (cmbFurnizor.SelectedItem is not Furnizor furnizor)
             {
-                MessageBox.Show("Выберите дату продажи.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите поставщика.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!decimal.TryParse(txtReducere.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var reducere) ||
-                reducere < 0 || reducere > 100)
+            if (!dpDataAprovizionare.SelectedDate.HasValue || !dpDataExpirare.SelectedDate.HasValue)
             {
-                MessageBox.Show("Скидка должна быть в диапазоне от 0 до 100.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите даты поставки и истечения.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!int.TryParse(txtNumarBilete.Text, out var numarBilete) || numarBilete <= 0)
+            if (!int.TryParse(txtCantitate.Text, out var cantitate) || cantitate <= 0)
             {
-                MessageBox.Show("Количество билетов должно быть больше 0.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Количество должно быть больше 0.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var freeSeats = GetFreeSeats();
-            if (numarBilete > freeSeats)
+            if (!TryParseDecimal(txtPretAchizitie.Text, out var pretAchizitie) || pretAchizitie <= 0)
             {
-                MessageBox.Show($"Недостаточно свободных мест. Доступно: {freeSeats}.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Закупочная цена должна быть больше 0.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var price = GetTicketPrice();
-            var sum = Math.Round(price * numarBilete * (1 - reducere / 100m), 2);
-            var dataVanzare = dpDataVanzare.SelectedDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            if (dpDataExpirare.SelectedDate.Value.Date <= dpDataAprovizionare.SelectedDate.Value.Date)
+            {
+                MessageBox.Show("Дата истечения должна быть позже даты поставки.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             try
             {
-                if (_isEdit && _bilet != null)
-                {
-                    _db.ExecuteNonQuery(
-                        @"UPDATE Bilete
-                          SET IdSeansa = @idSeansa, ReducereProcent = @reducere, NumarBilete = @numar, SumaAchitata = @suma, DataVanzare = @data
-                          WHERE IdBilet = @id",
-                        new SqliteParameter("@idSeansa", seans.IdSeansa),
-                        new SqliteParameter("@reducere", reducere),
-                        new SqliteParameter("@numar", numarBilete),
-                        new SqliteParameter("@suma", sum),
-                        new SqliteParameter("@data", dataVanzare),
-                        new SqliteParameter("@id", _bilet.IdBilet));
-                }
-                else
-                {
-                    _db.ExecuteNonQuery(
-                        @"INSERT INTO Bilete (IdSeansa, ReducereProcent, NumarBilete, SumaAchitata, DataVanzare)
-                          VALUES (@idSeansa, @reducere, @numar, @suma, @data)",
-                        new SqliteParameter("@idSeansa", seans.IdSeansa),
-                        new SqliteParameter("@reducere", reducere),
-                        new SqliteParameter("@numar", numarBilete),
-                        new SqliteParameter("@suma", sum),
-                        new SqliteParameter("@data", dataVanzare));
-                }
+                var model = _aprovizionare ?? new Aprovizionare();
+                model.IdMedicament = medicament.IdMedicament;
+                model.IdFurnizor = furnizor.IdFurnizor;
+                model.DataAprovizionare = dpDataAprovizionare.SelectedDate.Value;
+                model.Cantitate = cantitate;
+                model.PretAchizitie = pretAchizitie;
+                model.DataExpirare = dpDataExpirare.SelectedDate.Value;
 
+                _db.SaveAprovizionare(model, _isEdit);
                 DialogResult = true;
                 Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка сохранения продажи: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка сохранения поставки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private static bool TryParseDecimal(string value, out decimal result)
+        {
+            return decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out result) ||
+                   decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)

@@ -1,12 +1,11 @@
 using CourseCenterWPF.Models;
 using CourseCenterWPF.Services;
 using CourseCenterWPF.Views.DialogWindows;
-using Microsoft.Data.Sqlite;
+using CourseCenterWPF.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Data;
-using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
@@ -14,335 +13,234 @@ namespace CourseCenterWPF.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseService _db = new DatabaseService();
+        private readonly DatabaseService _db = new();
 
-        public ObservableCollection<Film> Filme { get; } = new();
-        public ObservableCollection<Seans> Seanse { get; } = new();
-        public ObservableCollection<Bilet> Bilete { get; } = new();
-        public ObservableCollection<Film> FilmeForCombo { get; } = new();
-        public ObservableCollection<Seans> SeanseForCombo { get; } = new();
+        public ObservableCollection<Medicament> Medicamente { get; } = new();
+        public ObservableCollection<Furnizor> Furnizori { get; } = new();
+        public ObservableCollection<Aprovizionare> Aprovizionari { get; } = new();
+        public ObservableCollection<Medicament> MedicamenteForFilter { get; } = new();
+        public ObservableCollection<Furnizor> FurnizoriForFilter { get; } = new();
 
-        private Film? _selectedFilm;
-        public Film? SelectedFilm
+        private Medicament? _selectedMedicament;
+        public Medicament? SelectedMedicament
         {
-            get => _selectedFilm;
-            set { _selectedFilm = value; OnPropertyChanged(); }
+            get => _selectedMedicament;
+            set { _selectedMedicament = value; OnPropertyChanged(); }
         }
 
-        private Seans? _selectedSeans;
-        public Seans? SelectedSeans
+        private Furnizor? _selectedFurnizor;
+        public Furnizor? SelectedFurnizor
         {
-            get => _selectedSeans;
-            set { _selectedSeans = value; OnPropertyChanged(); }
+            get => _selectedFurnizor;
+            set { _selectedFurnizor = value; OnPropertyChanged(); }
         }
 
-        private Bilet? _selectedBilet;
-        public Bilet? SelectedBilet
+        private Aprovizionare? _selectedAprovizionare;
+        public Aprovizionare? SelectedAprovizionare
         {
-            get => _selectedBilet;
-            set { _selectedBilet = value; OnPropertyChanged(); }
+            get => _selectedAprovizionare;
+            set { _selectedAprovizionare = value; OnPropertyChanged(); }
         }
 
-        private string _filmSearchText = string.Empty;
-        public string FilmSearchText
+        private string _medicamentSearchText = string.Empty;
+        public string MedicamentSearchText
         {
-            get => _filmSearchText;
+            get => _medicamentSearchText;
             set
             {
-                _filmSearchText = value;
+                _medicamentSearchText = value;
                 OnPropertyChanged();
-                LoadFilme();
+                LoadMedicamente();
             }
         }
 
-        private Film? _selectedFilmFilter;
-        public Film? SelectedFilmFilter
+        private string _furnizorSearchText = string.Empty;
+        public string FurnizorSearchText
         {
-            get => _selectedFilmFilter;
+            get => _furnizorSearchText;
             set
             {
-                _selectedFilmFilter = value;
+                _furnizorSearchText = value;
                 OnPropertyChanged();
-                LoadSeanse();
+                LoadFurnizori();
             }
         }
 
-        private DateTime? _seansDateFilter;
-        public DateTime? SeansDateFilter
+        private Medicament? _selectedMedicamentFilter;
+        public Medicament? SelectedMedicamentFilter
         {
-            get => _seansDateFilter;
+            get => _selectedMedicamentFilter;
             set
             {
-                _seansDateFilter = value;
+                _selectedMedicamentFilter = value;
                 OnPropertyChanged();
-                LoadSeanse();
+                LoadAprovizionari();
             }
         }
 
-        private Film? _selectedFilmBiletFilter;
-        public Film? SelectedFilmBiletFilter
+        private Furnizor? _selectedFurnizorFilter;
+        public Furnizor? SelectedFurnizorFilter
         {
-            get => _selectedFilmBiletFilter;
+            get => _selectedFurnizorFilter;
             set
             {
-                _selectedFilmBiletFilter = value;
+                _selectedFurnizorFilter = value;
                 OnPropertyChanged();
-                LoadBilete();
+                LoadAprovizionari();
             }
         }
 
-        private Seans? _selectedSeansBiletFilter;
-        public Seans? SelectedSeansBiletFilter
+        private DateTime? _aprovizionareFromFilter;
+        public DateTime? AprovizionareFromFilter
         {
-            get => _selectedSeansBiletFilter;
+            get => _aprovizionareFromFilter;
             set
             {
-                _selectedSeansBiletFilter = value;
+                _aprovizionareFromFilter = value;
                 OnPropertyChanged();
-                LoadBilete();
+                LoadAprovizionari();
             }
         }
 
-        private DateTime? _biletDateFilter;
-        public DateTime? BiletDateFilter
+        private DateTime? _aprovizionareToFilter;
+        public DateTime? AprovizionareToFilter
         {
-            get => _biletDateFilter;
+            get => _aprovizionareToFilter;
             set
             {
-                _biletDateFilter = value;
+                _aprovizionareToFilter = value;
                 OnPropertyChanged();
-                LoadBilete();
+                LoadAprovizionari();
             }
         }
 
-        public RelayCommand AddFilmCommand { get; }
-        public RelayCommand EditFilmCommand { get; }
-        public RelayCommand DeleteFilmCommand { get; }
-        public RelayCommand AddSeansCommand { get; }
-        public RelayCommand EditSeansCommand { get; }
-        public RelayCommand DeleteSeansCommand { get; }
-        public RelayCommand AddBiletCommand { get; }
-        public RelayCommand EditBiletCommand { get; }
-        public RelayCommand DeleteBiletCommand { get; }
-        public RelayCommand ResetSeansFiltersCommand { get; }
-        public RelayCommand ResetBiletFiltersCommand { get; }
+        public RelayCommand AddMedicamentCommand { get; }
+        public RelayCommand EditMedicamentCommand { get; }
+        public RelayCommand DeleteMedicamentCommand { get; }
+        public RelayCommand AddFurnizorCommand { get; }
+        public RelayCommand EditFurnizorCommand { get; }
+        public RelayCommand DeleteFurnizorCommand { get; }
+        public RelayCommand AddAprovizionareCommand { get; }
+        public RelayCommand EditAprovizionareCommand { get; }
+        public RelayCommand DeleteAprovizionareCommand { get; }
+        public RelayCommand ResetAprovizionareFiltersCommand { get; }
+        public RelayCommand OpenReportCommand { get; }
 
         public MainViewModel()
         {
-            AddFilmCommand = new RelayCommand(AddFilm);
-            EditFilmCommand = new RelayCommand(EditFilm, () => SelectedFilm != null);
-            DeleteFilmCommand = new RelayCommand(DeleteFilm, () => SelectedFilm != null);
-            AddSeansCommand = new RelayCommand(AddSeans);
-            EditSeansCommand = new RelayCommand(EditSeans, () => SelectedSeans != null);
-            DeleteSeansCommand = new RelayCommand(DeleteSeans, () => SelectedSeans != null);
-            AddBiletCommand = new RelayCommand(AddBilet);
-            EditBiletCommand = new RelayCommand(EditBilet, () => SelectedBilet != null);
-            DeleteBiletCommand = new RelayCommand(DeleteBilet, () => SelectedBilet != null);
-            ResetSeansFiltersCommand = new RelayCommand(ResetSeansFilters);
-            ResetBiletFiltersCommand = new RelayCommand(ResetBiletFilters);
+            AddMedicamentCommand = new RelayCommand(AddMedicament);
+            EditMedicamentCommand = new RelayCommand(EditMedicament, () => SelectedMedicament != null);
+            DeleteMedicamentCommand = new RelayCommand(DeleteMedicament, () => SelectedMedicament != null);
+
+            AddFurnizorCommand = new RelayCommand(AddFurnizor);
+            EditFurnizorCommand = new RelayCommand(EditFurnizor, () => SelectedFurnizor != null);
+            DeleteFurnizorCommand = new RelayCommand(DeleteFurnizor, () => SelectedFurnizor != null);
+
+            AddAprovizionareCommand = new RelayCommand(AddAprovizionare);
+            EditAprovizionareCommand = new RelayCommand(EditAprovizionare, () => SelectedAprovizionare != null);
+            DeleteAprovizionareCommand = new RelayCommand(DeleteAprovizionare, () => SelectedAprovizionare != null);
+            ResetAprovizionareFiltersCommand = new RelayCommand(ResetAprovizionareFilters);
+            OpenReportCommand = new RelayCommand(OpenReport);
 
             LoadAllData();
         }
 
         private void LoadAllData()
         {
-            LoadFilmeForCombo();
-            LoadFilme();
-            LoadSeanseForCombo();
-            LoadSeanse();
-            LoadBilete();
+            LoadMedicamenteFilters();
+            LoadFurnizoriFilters();
+            LoadMedicamente();
+            LoadFurnizori();
+            LoadAprovizionari();
         }
 
-        private void LoadFilmeForCombo()
+        private void LoadMedicamenteFilters()
         {
-            FilmeForCombo.Clear();
-            FilmeForCombo.Add(new Film { IdFilm = 0, Titlu = "Все фильмы" });
-            foreach (var film in _db.GetFilme())
+            var selectedId = SelectedMedicamentFilter?.IdMedicament ?? 0;
+            MedicamenteForFilter.Clear();
+            MedicamenteForFilter.Add(new Medicament { IdMedicament = 0, Denumire = "Toate medicamentele" });
+            foreach (var item in _db.GetMedicamente())
             {
-                FilmeForCombo.Add(film);
+                MedicamenteForFilter.Add(item);
             }
 
-            SelectedFilmFilter ??= FilmeForCombo[0];
-            SelectedFilmBiletFilter ??= FilmeForCombo[0];
+            SelectedMedicamentFilter = MedicamenteForFilter.FirstOrDefault(x => x.IdMedicament == selectedId) ?? MedicamenteForFilter[0];
         }
 
-        private void LoadSeanseForCombo()
+        private void LoadFurnizoriFilters()
         {
-            SeanseForCombo.Clear();
-            SeanseForCombo.Add(new Seans { IdSeansa = 0, FilmTitlu = "Все сеансы", DataSeansa = DateTime.Today, OraSeansa = "-" });
-
-            var dt = _db.ExecuteQuery(@"
-                SELECT s.IdSeansa, f.Titlu, s.DataSeansa, s.OraSeansa
-                FROM Seanse s
-                JOIN Filme f ON f.IdFilm = s.IdFilm
-                ORDER BY s.DataSeansa, s.OraSeansa");
-
-            foreach (DataRow row in dt.Rows)
+            var selectedId = SelectedFurnizorFilter?.IdFurnizor ?? 0;
+            FurnizoriForFilter.Clear();
+            FurnizoriForFilter.Add(new Furnizor { IdFurnizor = 0, Denumire = "Toti furnizorii" });
+            foreach (var item in _db.GetFurnizori())
             {
-                SeanseForCombo.Add(new Seans
-                {
-                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
-                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
-                    DataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
-                    OraSeansa = row["OraSeansa"].ToString() ?? string.Empty
-                });
+                FurnizoriForFilter.Add(item);
             }
 
-            SelectedSeansBiletFilter ??= SeanseForCombo[0];
+            SelectedFurnizorFilter = FurnizoriForFilter.FirstOrDefault(x => x.IdFurnizor == selectedId) ?? FurnizoriForFilter[0];
         }
 
-        private void LoadFilme()
+        private void LoadMedicamente()
         {
-            Filme.Clear();
-            var query = "SELECT IdFilm, Titlu, Gen, DurataMinute, LimitaVarsta FROM Filme";
-            var parameters = new Collection<SqliteParameter>();
-
-            if (!string.IsNullOrWhiteSpace(FilmSearchText))
+            Medicamente.Clear();
+            foreach (var item in _db.GetMedicamente(MedicamentSearchText))
             {
-                query += " WHERE Titlu LIKE @q OR Gen LIKE @q OR CAST(LimitaVarsta AS TEXT) LIKE @q";
-                parameters.Add(new SqliteParameter("@q", $"%{FilmSearchText.Trim()}%"));
-            }
-
-            query += " ORDER BY Titlu";
-            var dt = _db.ExecuteQuery(query, [.. parameters]);
-            foreach (DataRow row in dt.Rows)
-            {
-                Filme.Add(new Film
-                {
-                    IdFilm = Convert.ToInt32(row["IdFilm"]),
-                    Titlu = row["Titlu"].ToString() ?? string.Empty,
-                    Gen = row["Gen"].ToString() ?? string.Empty,
-                    DurataMinute = Convert.ToInt32(row["DurataMinute"]),
-                    LimitaVarsta = Convert.ToInt32(row["LimitaVarsta"])
-                });
+                Medicamente.Add(item);
             }
         }
 
-        private void LoadSeanse()
+        private void LoadFurnizori()
         {
-            Seanse.Clear();
-            var query = @"
-                SELECT s.IdSeansa, s.IdFilm, f.Titlu, s.DataSeansa, s.OraSeansa, s.PretBilet, s.NumarLocuriTotal,
-                       COALESCE(SUM(b.NumarBilete), 0) AS TotalBileteVandute
-                FROM Seanse s
-                JOIN Filme f ON f.IdFilm = s.IdFilm
-                LEFT JOIN Bilete b ON b.IdSeansa = s.IdSeansa
-                WHERE 1=1";
-            var parameters = new Collection<SqliteParameter>();
-
-            if (SelectedFilmFilter is { IdFilm: > 0 })
+            Furnizori.Clear();
+            foreach (var item in _db.GetFurnizori(FurnizorSearchText))
             {
-                query += " AND s.IdFilm = @filmId";
-                parameters.Add(new SqliteParameter("@filmId", SelectedFilmFilter.IdFilm));
-            }
-
-            if (SeansDateFilter.HasValue)
-            {
-                query += " AND s.DataSeansa = @data";
-                parameters.Add(new SqliteParameter("@data", SeansDateFilter.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
-            }
-
-            query += " GROUP BY s.IdSeansa ORDER BY s.DataSeansa, s.OraSeansa";
-
-            var dt = _db.ExecuteQuery(query, [.. parameters]);
-            foreach (DataRow row in dt.Rows)
-            {
-                Seanse.Add(new Seans
-                {
-                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
-                    IdFilm = Convert.ToInt32(row["IdFilm"]),
-                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
-                    DataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
-                    OraSeansa = row["OraSeansa"].ToString() ?? string.Empty,
-                    PretBilet = Convert.ToDecimal(row["PretBilet"]),
-                    NumarLocuriTotal = Convert.ToInt32(row["NumarLocuriTotal"]),
-                    TotalBileteVandute = Convert.ToInt32(row["TotalBileteVandute"])
-                });
+                Furnizori.Add(item);
             }
         }
 
-        private void LoadBilete()
+        private void LoadAprovizionari()
         {
-            Bilete.Clear();
-            var query = @"
-                SELECT b.IdBilet, b.IdSeansa, b.ReducereProcent, b.NumarBilete, b.SumaAchitata, b.DataVanzare,
-                       f.Titlu, s.DataSeansa, s.OraSeansa
-                FROM Bilete b
-                JOIN Seanse s ON s.IdSeansa = b.IdSeansa
-                JOIN Filme f ON f.IdFilm = s.IdFilm
-                WHERE 1=1";
-            var parameters = new Collection<SqliteParameter>();
-
-            if (SelectedFilmBiletFilter is { IdFilm: > 0 })
+            Aprovizionari.Clear();
+            var medicamentId = SelectedMedicamentFilter?.IdMedicament ?? 0;
+            var furnizorId = SelectedFurnizorFilter?.IdFurnizor ?? 0;
+            foreach (var item in _db.GetAprovizionari(medicamentId, furnizorId, AprovizionareFromFilter, AprovizionareToFilter))
             {
-                query += " AND f.IdFilm = @filmId";
-                parameters.Add(new SqliteParameter("@filmId", SelectedFilmBiletFilter.IdFilm));
-            }
-
-            if (SelectedSeansBiletFilter is { IdSeansa: > 0 })
-            {
-                query += " AND s.IdSeansa = @seansId";
-                parameters.Add(new SqliteParameter("@seansId", SelectedSeansBiletFilter.IdSeansa));
-            }
-
-            if (BiletDateFilter.HasValue)
-            {
-                query += " AND b.DataVanzare = @data";
-                parameters.Add(new SqliteParameter("@data", BiletDateFilter.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
-            }
-
-            query += " ORDER BY b.DataVanzare DESC, b.IdBilet DESC";
-
-            var dt = _db.ExecuteQuery(query, [.. parameters]);
-            foreach (DataRow row in dt.Rows)
-            {
-                var dataSeansa = DateTime.Parse(row["DataSeansa"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd"));
-                Bilete.Add(new Bilet
-                {
-                    IdBilet = Convert.ToInt32(row["IdBilet"]),
-                    IdSeansa = Convert.ToInt32(row["IdSeansa"]),
-                    ReducereProcent = Convert.ToDecimal(row["ReducereProcent"]),
-                    NumarBilete = Convert.ToInt32(row["NumarBilete"]),
-                    SumaAchitata = Convert.ToDecimal(row["SumaAchitata"]),
-                    DataVanzare = DateTime.Parse(row["DataVanzare"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
-                    FilmTitlu = row["Titlu"].ToString() ?? string.Empty,
-                    SeansInfo = $"{dataSeansa:dd.MM.yyyy} {row["OraSeansa"]}"
-                });
+                Aprovizionari.Add(item);
             }
         }
 
-        private void AddFilm()
+        private void AddMedicament()
         {
-            var dialog = new FilmDialog();
+            var dialog = new MedicamentDialog();
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void EditFilm()
+        private void EditMedicament()
         {
-            if (SelectedFilm == null)
+            if (SelectedMedicament == null)
             {
                 return;
             }
 
-            var dialog = new FilmDialog(SelectedFilm);
+            var dialog = new MedicamentDialog(SelectedMedicament);
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void DeleteFilm()
+        private void DeleteMedicament()
         {
-            if (SelectedFilm == null)
+            if (SelectedMedicament == null)
             {
                 return;
             }
 
             if (MessageBox.Show(
-                    $"Удалить фильм \"{SelectedFilm.Titlu}\" и связанные сеансы/билеты?",
+                    $"Удалить лекарство \"{SelectedMedicament.Denumire}\"?",
                     "Подтверждение",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -350,42 +248,42 @@ namespace CourseCenterWPF.ViewModels
                 return;
             }
 
-            _db.ExecuteNonQuery("DELETE FROM Filme WHERE IdFilm = @id", new SqliteParameter("@id", SelectedFilm.IdFilm));
+            _db.DeleteMedicament(SelectedMedicament.IdMedicament);
             LoadAllData();
         }
 
-        private void AddSeans()
+        private void AddFurnizor()
         {
-            var dialog = new SeansDialog(FilmeForCombo);
+            var dialog = new FurnizorDialog();
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void EditSeans()
+        private void EditFurnizor()
         {
-            if (SelectedSeans == null)
+            if (SelectedFurnizor == null)
             {
                 return;
             }
 
-            var dialog = new SeansDialog(FilmeForCombo, SelectedSeans);
+            var dialog = new FurnizorDialog(SelectedFurnizor);
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void DeleteSeans()
+        private void DeleteFurnizor()
         {
-            if (SelectedSeans == null)
+            if (SelectedFurnizor == null)
             {
                 return;
             }
 
             if (MessageBox.Show(
-                    "Удалить сеанс и связанные продажи билетов?",
+                    $"Удалить поставщика \"{SelectedFurnizor.Denumire}\" и связанные поставки?",
                     "Подтверждение",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -393,42 +291,49 @@ namespace CourseCenterWPF.ViewModels
                 return;
             }
 
-            _db.ExecuteNonQuery("DELETE FROM Seanse WHERE IdSeansa = @id", new SqliteParameter("@id", SelectedSeans.IdSeansa));
-            LoadAllData();
+            try
+            {
+                _db.DeleteFurnizor(SelectedFurnizor.IdFurnizor);
+                LoadAllData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void AddBilet()
+        private void AddAprovizionare()
         {
-            var dialog = new BiletDialog(SeanseForCombo);
+            var dialog = new AprovizionareDialog(MedicamenteForFilter, FurnizoriForFilter);
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void EditBilet()
+        private void EditAprovizionare()
         {
-            if (SelectedBilet == null)
+            if (SelectedAprovizionare == null)
             {
                 return;
             }
 
-            var dialog = new BiletDialog(SeanseForCombo, SelectedBilet);
+            var dialog = new AprovizionareDialog(MedicamenteForFilter, FurnizoriForFilter, SelectedAprovizionare);
             if (dialog.ShowDialog() == true)
             {
                 LoadAllData();
             }
         }
 
-        private void DeleteBilet()
+        private void DeleteAprovizionare()
         {
-            if (SelectedBilet == null)
+            if (SelectedAprovizionare == null)
             {
                 return;
             }
 
             if (MessageBox.Show(
-                    "Удалить выбранную продажу билетов?",
+                    "Удалить выбранную поставку?",
                     "Подтверждение",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -436,26 +341,34 @@ namespace CourseCenterWPF.ViewModels
                 return;
             }
 
-            _db.ExecuteNonQuery("DELETE FROM Bilete WHERE IdBilet = @id", new SqliteParameter("@id", SelectedBilet.IdBilet));
-            LoadAllData();
+            try
+            {
+                _db.DeleteAprovizionare(SelectedAprovizionare.IdAprovizionare);
+                LoadAllData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void ResetSeansFilters()
+        private void ResetAprovizionareFilters()
         {
-            SeansDateFilter = null;
-            SelectedFilmFilter = FilmeForCombo.Count > 0 ? FilmeForCombo[0] : null;
-            LoadSeanse();
+            AprovizionareFromFilter = null;
+            AprovizionareToFilter = null;
+            SelectedMedicamentFilter = MedicamenteForFilter.Count > 0 ? MedicamenteForFilter[0] : null;
+            SelectedFurnizorFilter = FurnizoriForFilter.Count > 0 ? FurnizoriForFilter[0] : null;
+            LoadAprovizionari();
         }
 
-        private void ResetBiletFilters()
+        private void OpenReport()
         {
-            BiletDateFilter = null;
-            SelectedFilmBiletFilter = FilmeForCombo.Count > 0 ? FilmeForCombo[0] : null;
-            SelectedSeansBiletFilter = SeanseForCombo.Count > 0 ? SeanseForCombo[0] : null;
-            LoadBilete();
+            var window = new ReportWindow(_db);
+            window.ShowDialog();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
         private void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
